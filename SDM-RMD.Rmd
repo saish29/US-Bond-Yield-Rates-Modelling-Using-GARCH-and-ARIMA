@@ -53,7 +53,7 @@ data <- Quandl("FED/SVENY")
 
 ```{r}
 
-head(data, 10)
+tail(data)
 ```
 
 ## Exploratory Data Analysis
@@ -97,7 +97,8 @@ ggplot(data, aes(x = Date, y = SVENY01)) +
 ```
 
 | 
-  Since the missing values were randomly distributed and accounted for a small proportion of the dataset, we decided to drop them from our analysis instead of using any imputation method, which could introduce bias. The line plot was used to confirm that there were no missing data points in between the available data.
+
+Since the missing values were randomly distributed and accounted for a small proportion of the dataset, we decided to drop them from our analysis instead of using any imputation method, which could introduce bias. The line plot was used to confirm that there were no missing data points in between the available data.
 
 ## Dropping NA Values
 
@@ -131,28 +132,11 @@ data_xts <- as.xts(x = data[, -1], order.by = as.Date(data$Date))
 
 ```
 
-```{r}
 
-
-# Create a daily sequence of dates
-daily_dates <- seq(from = start(data_xts), to = end(data_xts), by = "day")
-
-# Merge the daily sequence of dates with the original xts object
-data_xts_all_dates <- merge(data_xts, xts(order.by = daily_dates))
-
-# Fill missing values with last observation carried forward
-data_xts_all_dates_filled <- na.locf(data_xts_all_dates)
-
-
-```
 
 ```{r}
 
-```
-
-```{r}
-
-plot(data_xts, main = "US Zero Coupon Yields")
+plot(data_xts, main = "Evolution Of US Zero Coupon Yields")
 ```
 
 ### Rates - BEFORE COVID
@@ -202,61 +186,49 @@ dygraph(data_xts_after,
   dyLegend(show = "follow") 
 ```
 
-## ETS EDA\
+## Plotting After Differentiation
 
 ```{r}
 
+# Testing Quandl API
 
-# Filter data for the year 2022
-data_xts_2018af <- data_xts[format(index(data_xts), "%Y") >= "2018"]
-```
-
-```{r}
-
-is.Date(index(data_xts))
-
-head(data)
-
-```
-
-### Decompose SVENY01 Data
-
-```{r}
-
-data
-```
-
-# Imputing Values
-
-```{r}
-
-data_treated <- na.locf(data, na.rm = FALSE)
-
-data_treated
+df <- Quandl("FED/SVENY")
 
 ```
 
 ```{r}
 
-colSums(is.na(data_treated))
+df_xts <- as.xts(x = df[, -1], order.by = df$Date)
 
-head(data_treated)
+df_xts_diff <- diff.xts(df_xts)
+
+head(df_xts_diff)
+
 
 ```
 
 ```{r}
 
+# Plotting the differentiated time series
 
-data <- na.omit(data)
+plot.palette <- rainbow(n = 30)
 
-nrow(data)
+plot.zoo(x = df_xts_diff, plot.type = "multiple", ylim = c(-0.5, 0.5), 
+         cex.axis = 0.7, ylab = 1:30, col = plot.palette, 
+         main = "All Zero Coupon Yields (1-30) Differenced", xlab = "Index")
+
+
 
 ```
 
+### Checking For Autocorrelations
+
 ```{r}
 
-data_2022 <- data %>% 
-  filter(Date > '2022-01-01' & Date < '2022-12-31')
+data_xts_diff_2010 <- df_xts_diff["2010/",]
+sveny01 <- data_xts_diff_2010[, "SVENY01"]
+sveny15 <- data_xts_diff_2010[, "SVENY15"]
+sveny30 <- data_xts_diff_2010[, "SVENY30"]
 
 
 
@@ -264,85 +236,18 @@ data_2022 <- data %>%
 
 ```{r}
 
-data_2022
-```
+# Plot
 
-```{r}
-dfasxts <- as.xts(x = data[, -1], order.by = data$Date)
-data_2022 <- as.xts(x = data_2022[, -1], order.by = data_2022$Date)
-dygraph(data_2022, main = "All Zero Coupon Yields (All Time Horizons) 2022", 
-        ylab = "Value") %>%
-            dyAxis('x', axisLabelFontSize = 12) %>%
-            dyRangeSelector()
-```
+par(mar=c(5.1, 4.1, 4.1, 2.1))
+par(mfrow=c(2,2))
+acf_1 <- acf(sveny01)
+acf_20 <- acf(sveny15)
 
-## Testing Shiny Board
-
-```{r}
-
-data$Date <- as.Date(data$Date)
-data$year <- format(as.Date(data$Date, format="%m/%d/%Y"),"%Y")
-data <- select(data, -Date)
-data <- na.omit(data)
-
-data <- data %>%
-  group_by(year) %>%
-  summarise_all(mean)
-
-```
-
-```{r}
-
-
-```
-
-```{r}
-
-SVENY01 <- data$SVENY01
-SVENY10 <- data$SVENY10
-SVENY30 <- data$SVENY30
-
-
-plot_data <- data.frame(data, SVENY01, SVENY10, SVENY30)
-plot_data <- select(plot_data, year, SVENY01, SVENY10, SVENY30)
-
-
+# Plot the autocorrelations of the absolute changes of yields
+acf_abs_1 <- acf(abs(sveny01))
+acf_abs_20 <- acf(abs(sveny15))
 
 
 
 ```
 
-```{r}
-fig <- plot_ly(plot_data, x = plot_data$year, y = ~SVENY01, name = 'SVENY01', 
-               type = 'scatter', mode = 'lines + markers') 
-fig <- fig %>% add_trace(y = ~SVENY10, name = 'SVENY10', mode = 'lines + markers') 
-fig <- fig %>% add_trace(y = ~SVENY30, name = 'SVENY30', mode = 'lines + markers')
-fig <- fig %>% layout(title = "",
-         xaxis = list(title = "year"),
-         yaxis = list (title = ""))
-
-
-fig
-```
-
-```{r}
-
-row.names(data) <- data$year
-
-data <- select(data, -year)
-
-data_mat <- data.matrix(data)
-
-```
-
-```{r}
-
-data_mat
-
-```
-
-```{r}
-
-
-heatmap(data_mat, Rowv = NA, Colv = NA, scale = "column", margins = c(4,1))
-```
