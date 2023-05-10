@@ -9,43 +9,39 @@
 
 library(shiny)
 
-# Define UI for application that draws a histogram
+library(shiny)
+library(shinythemes)
+
+data <- 
+dfasxts <- as.xts(x = data[, -1], order.by = data$Date)
+data_2022 <- as.xts(x = data_2022[, -1], order.by = data_2022$Date)
+
+# Define the UI
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
-    )
+  tags$head(
+    tags$style(HTML("
+    body {
+      background-color: black;
+      color: white;
+    }"
+    ))
+  ),
+  titlePanel("Modeling the Volatility of US Bond Yields"),
+  dygraphOutput("dygraph")
 )
 
-# Define server logic required to draw a histogram
+
+
+
 server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white',
-             xlab = 'Waiting time to next eruption (in mins)',
-             main = 'Histogram of waiting times')
-    })
+  output$dygraph <- renderDygraph({
+    dygraph(data_2022, main = "All Zero Coupon Yields (All Time Horizons) 2022", 
+            ylab = "Value") %>%
+      dyAxis('x', axisLabelFontSize = 12) %>%
+      dyRangeSelector()
+  })
 }
 
-# Run the application 
+
+# Run the Shiny app
 shinyApp(ui = ui, server = server)
