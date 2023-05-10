@@ -228,7 +228,7 @@ plot.zoo(x = df_xts_diff, plot.type = "multiple", ylim = c(-0.5, 0.5),
 data_xts_diff_2010 <- df_xts_diff["2010/",]
 sveny01 <- data_xts_diff_2010[, "SVENY01"]
 sveny15 <- data_xts_diff_2010[, "SVENY15"]
-sveny30 <- data_xts_diff_2010[, "SVENY30"]
+
 
 
 
@@ -241,11 +241,11 @@ sveny30 <- data_xts_diff_2010[, "SVENY30"]
 par(mar=c(5.1, 4.1, 4.1, 2.1))
 par(mfrow=c(2,2))
 acf_1 <- acf(sveny01)
-acf_20 <- acf(sveny15)
+acf_15 <- acf(sveny15)
 
 # Plot the autocorrelations of the absolute changes of yields
 acf_abs_1 <- acf(abs(sveny01))
-acf_abs_20 <- acf(abs(sveny15))
+acf_abs_15 <- acf(abs(sveny15))
 
 
 
