@@ -12,7 +12,7 @@ library(shiny)
 library(shiny)
 library(shinythemes)
 
-data <- 
+data <- QUan
 dfasxts <- as.xts(x = data[, -1], order.by = data$Date)
 data_2022 <- as.xts(x = data_2022[, -1], order.by = data_2022$Date)
 
