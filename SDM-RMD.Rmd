@@ -27,6 +27,8 @@ library(dygraphs)
 library(shiny)
 library(tidyverse)
 library(forecast)
+library(rugarch)
+library(tsibble)
 ```
 
 ## Change In Volatility Over Time
@@ -186,7 +188,7 @@ dygraph(data_xts_after,
   dyLegend(show = "follow") 
 ```
 
-## Plotting After Differentiation
+# Plotting After Differentiation
 
 ```{r}
 
@@ -221,16 +223,13 @@ plot.zoo(x = df_xts_diff, plot.type = "multiple", ylim = c(-0.5, 0.5),
 
 ```
 
-### Checking For Autocorrelations
+### Checking For Autocorrelations - 1990 - 2010
 
 ```{r}
 
-data_xts_diff_2010 <- df_xts_diff["2010/",]
-sveny01 <- data_xts_diff_2010[, "SVENY01"]
-sveny15 <- data_xts_diff_2010[, "SVENY15"]
-sveny30 <- data_xts_diff_2010[, "SVENY30"]
-
-
+data_xts_diff_1990_2010 <- df_xts_diff["1990/2010/",]
+sveny01 <- data_xts_diff_1990_2010[, "SVENY01"]
+sveny15 <- data_xts_diff_1990_2010[, "SVENY15"]
 
 ```
 
@@ -241,11 +240,232 @@ sveny30 <- data_xts_diff_2010[, "SVENY30"]
 par(mar=c(5.1, 4.1, 4.1, 2.1))
 par(mfrow=c(2,2))
 acf_1 <- acf(sveny01)
-acf_20 <- acf(sveny15)
+acf_15 <- acf(sveny15)
 
 # Plot the autocorrelations of the absolute changes of yields
 acf_abs_1 <- acf(abs(sveny01))
-acf_abs_20 <- acf(abs(sveny15))
+acf_abs_15 <- acf(abs(sveny15))
+
+
+
+```
+## Using GARCH Model To COnfirm Volatility
+
+### Fitting 1 Year Maturity
+```{r}
+
+sp <- ugarchspec(distribution.model = "sstd")
+
+
+# Fitting the model 
+
+fit1 <- ugarchfit(sveny01, spec = sp)
+
+
+# Saving rescaled residuals
+
+vol1 <- sigma(fit1)
+res1 <- scale(residuals(fit1, standardize = TRUE)) * sd(sveny01) + mean(sveny01)
+
+
+# Plotting the uield
+
+merge1 <- merge.xts(sveny01, vol1, res1)
+
+plot.zoo(merge1, main = "GARCH Model on 1 Year Maturity - 1990 To 2010")
+
+
+```
+### Fitting 15 Year Maturity
+```{r}
+
+
+
+# Fitting the model 
+
+fit2 <- ugarchfit(sveny15, spec = sp)
+
+
+# Saving rescaled residuals
+
+vol2 <- sigma(fit2)
+res2 <- scale(residuals(fit2, standardize = TRUE)) * sd(sveny15) + mean(sveny15)
+
+
+# Plotting the yield
+
+merge2 <- merge.xts(sveny15, vol2, res2)
+
+plot.zoo(merge2, main = "GARCH Model on 15 Year Maturity - 1990 To 2010")
+
+
+```
+
+
+
+### Checking For Autocorrelations - Data After 2010
+
+```{r}
+
+data_xts_diff_2010 <- df_xts_diff["2010/",]
+sveny01_10 <- data_xts_diff_2010[, "SVENY01"]
+sveny15_10 <- data_xts_diff_2010[, "SVENY15"]
+
+
+```
+
+```{r}
+
+# Plot
+
+par(mar=c(5.1, 4.1, 4.1, 2.1))
+par(mfrow=c(2,2))
+acf_1_10 <- acf(sveny01_10)
+acf_15_10 <- acf(sveny15_10)
+
+# Plot the autocorrelations of the absolute changes of yields
+acf_abs_1_10 <- acf(abs(sveny01_10))
+acf_abs_15_10 <- acf(abs(sveny15_10))
+
+
+
+```
+## Using GARCH Model To COnfirm Volatility
+
+### Fitting 1 Year Maturity
+```{r}
+
+sp <- ugarchspec(distribution.model = "sstd")
+
+
+# Fitting the model 
+
+fit3 <- ugarchfit(sveny01_10, spec = sp)
+
+
+# Saving rescaled residuals
+
+vol3 <- sigma(fit3)
+res3 <- scale(residuals(fit3, standardize = TRUE)) * sd(sveny01_10) + 
+  mean(sveny01_10)
+
+
+# Plotting the uield
+
+merge3 <- merge.xts(sveny01_10, vol3, res3)
+
+plot.zoo(merge3, main = "GARCH Model on 1 Year Maturity - After 2010")
+
+
+```
+### Fitting 15 Year Maturity
+```{r}
+
+
+
+# Fitting the model 
+
+fit4 <- ugarchfit(sveny15_10, spec = sp)
+
+
+# Saving rescaled residuals
+
+vol4 <- sigma(fit4)
+res4 <- scale(residuals(fit4, standardize = TRUE)) * sd(sveny15_10) 
++ mean(sveny15_10)
+
+
+# Plotting the yield
+
+merge4 <- merge.xts(sveny15_10, vol4, res4)
+
+plot.zoo(merge4, main = "GARCH Model on 15 Year Maturity - After 2010")
+
+
+```
+# Fitting ARIMA Model
+
+```{r}
+
+data_xts
+
+```
+
+```{r}
+
+# Plotting After Differentiation
+
+
+# Testing Quandl API
+
+df <- Quandl("FED/SVENY", start_date = "1990-01-01")
+
+```
+
+```{r}
+
+
+df_ts <- as_tsibble(df)
+
+train <- df_ts %>% 
+  filter(year(Date) < 2018)
+
+
+
+test <- df_ts %>% 
+  filter(year(Date) > 2018)
+
+```
+```{r}
+train$SVENY01
+```
+
+
+```{r}
+
+
+arima.fit <- train %>%
+  model(ARIMA(SVENY01 = ~ pdq(1,1,1)))
+
+report(arima.fit)
+
+```
+
+```{r}
+
+fc <- arima.fit %>%
+  forecast(new_data = test)
+
+
+fc %>%
+  autoplot(train) + 
+  autolayer(test, SVENY01) +
+  ggtitle("Arima (3,1,0)")
+```
+
+
+
+```{r}
+
+
+
+
+# Fit ARIMA model on training data
+fit <- auto.arima(train$SVENY01)
+
+# Make predictions on test data
+pred <- forecast(fit, h = length(test$SVENY01))
+
+
+
+
+# Plot actual and predicted values
+autoplot(pred) +
+autolayer(test)
+
+
+```
+```{r}
 
 
 
